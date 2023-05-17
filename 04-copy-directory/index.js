@@ -1,26 +1,32 @@
-const fs = require('fs');
+const { readdir, mkdir, stat, copyFile, unlink } = require('fs/promises');
 const path = require('path');
 
-const srcPath = path.join(__dirname, 'files');
-const destPath = path.join(__dirname, 'files-copy');
+const destinationFolder = path.join(__dirname, 'files-copy');
 
-//TODO: file refresh is not occuring:
-// when the file removes from 'files' folder, it is not removing from files-copy
-//fs.rm(destPath, { recursive: true, force: true }, callback);
-
-fs.mkdir(destPath, { recursive: true }, callback);
-
-fs.readdir(srcPath, (err, files) => {
-    callback(err);
+async function copyFiles() {
+    const currentFolder = path.join(__dirname, 'files');
+    const files = await readdir(currentFolder);
     for (const file of files) {
-        const src = path.join(srcPath, file);
-        const dest = path.join(destPath, file);
-        fs.copyFile(src, dest, callback);
-        //TODO: file refresh is not occuring:
-        // when the file removes from 'files' folder, it is not removing from files-copy
+        const srcPath = path.join(currentFolder, file);
+        const destPath = path.join(destinationFolder, file);
+        await copyFile(srcPath, destPath);
     }
-});
-
-function callback (err) {
-    if (err) throw err;
 }
+async function clearFolder() {
+    const files = await readdir(destinationFolder);
+    for (const file of files) {
+        const destPath = path.join(destinationFolder, file);
+        await unlink(destPath);
+    }
+}
+async function copyDirectory(){
+    try {
+        await stat(destinationFolder);
+        await clearFolder();
+    } catch {
+        await mkdir(destinationFolder, { recursive: true });
+    } finally {
+        await copyFiles();
+    }
+}
+copyDirectory();

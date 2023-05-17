@@ -1,24 +1,24 @@
-const fs = require('fs');
+const { readdir } = require('fs/promises');
+const { pipeline } = require('stream/promises');
+const { createReadStream, createWriteStream } = require('fs');
 const path = require('path');
 
-const styles_path = path.join(__dirname, 'styles');
-fs.readdir(styles_path, (err, files) => {
-    if (err) throw err;
-
+async function createBundle() {
+    const stylesFolder = path.join(__dirname, 'styles');
+    const files = await readdir(stylesFolder, {withFileTypes: true});
+    const cssFilePathes = files
+        .filter(file => !file.isDirectory())
+        .map((file) => file.name)
+        .filter(fileName => path.extname(fileName) === '.css')
+        .map(file => path.join(stylesFolder, file));
+    await  mergeFiles(cssFilePathes);
+}
+async function mergeFiles(cssFilePathes) {
     const dist_path = path.join(__dirname, 'project-dist', 'bundle.css');
-    const output = fs.createWriteStream(dist_path, "utf8");
-
-    for (const file of files) {
-        const file_path = path.join(styles_path, file);
-
-        fs.stat(file_path, (err_stat, stats) => {
-            if (err_stat) throw err_stat;
-
-            if(stats.isDirectory()) return;
-            if(path.extname(file) != '.css') return;
-
-            const input = fs.createReadStream(file_path, "utf8");
-            input.on("data", chunk => output.write(chunk));
-        });
+    for (const filePath of cssFilePathes) {
+        const readStream = createReadStream(filePath, "utf8");
+        const writeStream = createWriteStream(dist_path, {flags: 'a'} , "utf8");
+        await pipeline(readStream, writeStream);
     }
-});
+}
+createBundle();

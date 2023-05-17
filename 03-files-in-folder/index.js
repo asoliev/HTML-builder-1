@@ -1,20 +1,26 @@
-const fs = require('fs');
+const { readdir, stat } = require('fs/promises');
 const path = require('path');
-const folderPath = path.join(__dirname, 'secret-folder');
-fs.readdir(folderPath, (err, files) => {
-    if (err) throw err;
-    for (const file of files) {
-        fs.stat(path.join(folderPath, file), (err2, stats) => {
-            if (err2) throw err2;
+const BYTES_IN_KB = 1024;
+async function getFilesInfo() {
+    const folderPath = path.join(__dirname, 'secret-folder');
+    const files = await readdir(folderPath, { withFileTypes: true });
+    const tableData = await Promise.all(files.map(async (file) => {
+        if (file.isDirectory()) return null;
+        const filePath = path.join(folderPath, file.name);
+        const fileStat = await stat(filePath);
 
-            if (stats.isDirectory()) return;
-            const fileSize = stats.size / 8;
+        const fileExtension = path.extname(file.name);
+        const fileName = path.basename(file.name, fileExtension);
+        const formattedFileExtension = fileExtension.slice(1);
+        const fileSizeKb = Math.round(fileStat.size / BYTES_IN_KB);
 
-            const ext = path.extname(file);
-            const name = path.basename(file, ext);
-            const ext2 = ext.replace('.', '');
-
-            console.log(name, ' - ', ext2, ' - ', fileSize, 'kb');
-        });
-    }
-});
+        return {
+            Name: fileName,
+            ext: formattedFileExtension,
+            sizeKb: fileSizeKb
+        };
+    }));
+    const filteredData = tableData.filter(Boolean);
+    console.table(filteredData);
+}
+getFilesInfo();

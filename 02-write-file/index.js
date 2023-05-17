@@ -1,17 +1,25 @@
 const fs = require('fs');
 const path = require('path');
-const {stdin, stdout, exit } = require('process');
-const output = fs.createWriteStream(path.join(__dirname, 'text.txt'), "utf8");
+const rl = require('readline');
 
-stdout.write('Enter the text: ');
-stdin.on('data', data => {
-    if (data.toString().trim() === 'exit') {
-        sayBye();
-    }
-    output.write(data);
+const {stdin, stdout, exit } = require('process');
+const filePath = path.join(__dirname, 'text.txt');
+const writeStream = fs.createWriteStream(filePath, {flags: 'a'}, 'utf8');
+
+const readLine = rl.createInterface({
+    input: stdin,
+    output: stdout
 });
 
-process.on('SIGINT', sayBye);
+stdout.write('Enter the text: \n');
+readLine.on('line', (data) => {
+    if (data === 'exit') {
+        sayBye();
+    }
+    writeStream.write(data);
+});
+
+readLine.on('SIGINT', sayBye);
 
 function sayBye() {
     stdout.write('Goodbye!');
